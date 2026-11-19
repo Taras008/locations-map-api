@@ -42,9 +42,11 @@ def test_icontains_search_uses_trigram_index(lookup, index_name):
     queryset = Location.all_objects.filter(**{lookup: "хрещ"})
 
     with connection.cursor() as cursor:
-        # На кількох рядках планувальник обрав би seq scan — забороняємо його, щоб
-        # перевірити саме те, що індекс придатний для запиту, який генерує ORM.
+        # На кількох рядках планувальник обрав би seq scan або повний прохід btree-індексу
+        # created_at (через Meta.ordering) — забороняємо обидва, щоб перевірити саме те, що
+        # GIN-індекс (він працює лише через bitmap scan) придатний для запиту з ORM.
         cursor.execute("SET LOCAL enable_seqscan = off")
+        cursor.execute("SET LOCAL enable_indexscan = off")
         plan = queryset.explain()
 
     assert index_name in plan
