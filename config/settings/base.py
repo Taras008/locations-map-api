@@ -255,6 +255,8 @@ DEFAULT_FROM_EMAIL = env_str("DEFAULT_FROM_EMAIL", "Locations Map <noreply@locat
 # Ретраї email-задач Celery: кількість повторів і експоненційна затримка (секунд, база).
 EMAIL_TASK_MAX_RETRIES = env_int("EMAIL_TASK_MAX_RETRIES", 3)
 EMAIL_TASK_RETRY_BACKOFF = env_int("EMAIL_TASK_RETRY_BACKOFF", 10)
+# Маркер «лист про відгук надіслано» в кеші: повторна доставка задачі не шле дубль.
+NOTIFICATION_SENT_MARKER_TTL = env_int("NOTIFICATION_SENT_MARKER_TTL", 24 * 3600)
 
 # --- Logging ---
 LOG_LEVEL = env_str("LOG_LEVEL", "INFO").upper()

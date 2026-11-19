@@ -4,10 +4,13 @@ from django.db import IntegrityError, transaction
 from rest_framework.exceptions import NotFound
 
 from apps.locations.models import Location
+from apps.reviews.models import Review
 from apps.users.models import User
 from common.exceptions import ConflictError
+from common.queue import enqueue_on_commit
 
 from .models import LocationSubscription
+from .tasks import send_new_review_notifications
 
 logger = logging.getLogger(__name__)
 
@@ -34,3 +37,8 @@ def unsubscribe(*, user: User, location: Location) -> None:
     logger.info(
         "Unsubscribed from location", extra={"location_id": location.pk, "user_id": user.pk}
     )
+
+
+def notify_new_review(review: Review) -> None:
+    """Листи автору локації й підписникам — після коміту, щоб воркер точно побачив відгук."""
+    enqueue_on_commit(send_new_review_notifications, review.pk)

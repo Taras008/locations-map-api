@@ -1,0 +1,1 @@
+{% autoescape off %}Новий відгук про «{{ location_name }}» — Locations Map{% endautoescape %}

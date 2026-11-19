@@ -1,0 +1,12 @@
+{% autoescape off %}
+Вітаємо, {{ username }}!
+
+{{ reviewer }} залишив(-ла) новий відгук про «{{ location_name }}».
+
+Оцінка: {{ rating }}/{{ rating_max }}
+{{ comment|truncatechars:500 }}
+
+Переглянути локацію: {{ location_url }}
+
+{% if is_location_author %}Ви отримали цей лист, бо ви автор цієї локації.{% else %}Ви отримали цей лист, бо підписані на нові відгуки цієї локації. Відписатися можна на сторінці локації.{% endif %}
+{% endautoescape %}

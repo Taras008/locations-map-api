@@ -4,6 +4,7 @@ from django.db import IntegrityError, transaction
 from rest_framework.exceptions import NotFound
 
 from apps.locations.models import Location
+from apps.notifications import services as notification_services
 from apps.users.models import User
 from common.exceptions import BusinessRuleError, ConflictError
 
@@ -33,6 +34,7 @@ def create_review(*, author: User, location: Location, **data) -> Review:
         "Review created",
         extra={"review_id": review.pk, "location_id": location.pk, "user_id": author.pk},
     )
+    notification_services.notify_new_review(review)
     return review
 
 
