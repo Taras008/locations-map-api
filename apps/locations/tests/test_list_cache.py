@@ -86,6 +86,28 @@ class TestCacheHit:
 
         assert len(response.json()["results"]) == 1
 
+    def test_pagination_links_are_built_per_request(self, api_client, django_assert_num_queries):
+        LocationFactory.create_batch(3)
+        api_client.get(LIST_URL, {"page_size": 1, "page": 2, "utm": "junk"}, HTTP_HOST="a.example")
+
+        with django_assert_num_queries(0):
+            body = api_client.get(
+                LIST_URL, {"page": 2, "page_size": 1}, HTTP_HOST="b.example"
+            ).json()
+
+        assert body["next"] == "http://b.example/api/v1/locations/?page=3&page_size=1"
+        assert body["previous"] == "http://b.example/api/v1/locations/?page_size=1"
+        assert list(body) == ["count", "next", "previous", "results"]
+
+    def test_cached_links_match_fresh_ones(self, api_client):
+        LocationFactory.create_batch(3)
+        params = {"page_size": 1, "page": 2, "ordering": "created_at"}
+
+        fresh = api_client.get(LIST_URL, params).json()
+        cached = api_client.get(LIST_URL, params).json()
+
+        assert cached == fresh
+
     def test_errors_are_not_cached(self, api_client):
         assert api_client.get(LIST_URL, {"min_rating": "abc"}).status_code == 400
         assert api_client.get(LIST_URL, {"min_rating": "abc"}).status_code == 400

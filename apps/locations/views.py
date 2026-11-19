@@ -104,12 +104,12 @@ class LocationViewSet(viewsets.ModelViewSet):
             self.paginator.page_query_param,
             self.paginator.page_size_query_param,
         ]
-        key, data = caching.get_cached_list(request.query_params, known_params)
-        if data is not None:
-            return Response(data)
+        key, cached = caching.get_cached_list(request.query_params, known_params)
+        if cached is not None:
+            return Response(self.paginator.load_page(request, cached))
         response = super().list(request, *args, **kwargs)
         if key is not None and response.status_code == 200:
-            caching.set_cached_list(key, response.data)
+            caching.set_cached_list(key, self.paginator.dump_page(response.data))
         return response
 
     def retrieve(self, request, *args, **kwargs):
