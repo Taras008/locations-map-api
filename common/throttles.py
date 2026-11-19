@@ -25,3 +25,13 @@ class UserThrottle(ClientIPMixin, UserRateThrottle):
 
 class ScopedThrottle(ClientIPMixin, ScopedRateThrottle):
     pass
+
+
+class IPScopedThrottle(ScopedThrottle):
+    """
+    Scoped-ліміт завжди за IP, навіть для залогінених. Для login/register/password reset:
+    інакше після успішного входу чи реєстрації лічильник обнулюється (ключ змінюється на user id).
+    """
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}
