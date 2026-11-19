@@ -47,7 +47,17 @@ services:
 
   celery:
     <<: *app
-    command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "--concurrency=2"]
+    # Dev: watchfiles перезапускає worker при зміні .py (аналог GUNICORN_RELOAD для web) —
+    # інакше нові задачі не реєструються й відкидаються з KeyError. watchfiles — dev-залежність,
+    # у production worker запускається напряму: celery -A config worker ...
+    command:
+      - watchfiles
+      - --filter
+      - python
+      - celery -A config worker --loglevel=INFO --concurrency=2
+      - apps
+      - common
+      - config
     healthcheck:
       test: ["CMD-SHELL", "celery -A config inspect ping -d celery@$$HOSTNAME --timeout 5 | grep -q pong"]
       interval: 30s
