@@ -178,6 +178,10 @@ POPULARITY_WEIGHT_VIEWS = env_float("POPULARITY_WEIGHT_VIEWS", 1.0)
 # Вікно для views_7d (днів).
 POPULARITY_VIEWS_WINDOW_DAYS = env_int("POPULARITY_VIEWS_WINDOW_DAYS", 7)
 
+# --- Views ---
+# Повторний перегляд тим самим відвідувачем протягом цього часу (секунд) не рахується.
+LOCATION_VIEW_DEDUP_TTL = env_int("LOCATION_VIEW_DEDUP_TTL", 60 * 60)
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "common.authentication.SessionAuthentication",

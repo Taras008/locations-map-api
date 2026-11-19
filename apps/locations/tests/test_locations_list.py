@@ -43,13 +43,14 @@ class TestStatsFields:
         with freeze_time(timezone.now() - timedelta(days=10)):
             LocationViewFactory(location=location)
 
-        item = api_client.get(LIST_URL).json()["results"][0]
+        # Деталі першими: перегляд, який вони записують, уже видно й у списку.
         detail = api_client.get(f"{LIST_URL}{location.pk}/").json()
+        item = api_client.get(LIST_URL).json()["results"][0]
 
         assert item["avg_rating"] == 4.5
         assert item["reviews_count"] == 2
-        assert item["views_7d"] == 3
-        assert item["views_total"] == 4
+        assert item["views_7d"] == 4
+        assert item["views_total"] == 5
         assert isinstance(item["popularity"], float)
         assert {k: detail[k] for k in item} == item
 

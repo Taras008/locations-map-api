@@ -1,5 +1,6 @@
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import viewsets
+from rest_framework.response import Response
 
 from common.permissions import IsAdminOrReadOnly, IsOwnerOrAdminOrReadOnly
 
@@ -46,7 +47,11 @@ class CategoryViewSet(viewsets.ModelViewSet):
         description="Пошук, фільтри, сортування (за замовчуванням -popularity) і пагінація. "
         "Локації без відгуків (avg_rating = null) завжди в кінці сортування за рейтингом.",
     ),
-    retrieve=extend_schema(summary="Локація"),
+    retrieve=extend_schema(
+        summary="Локація",
+        description="Реєструє перегляд: один на відвідувача (користувача або IP) за TTL "
+        "дедуплікації; перегляди автором власної локації не рахуються.",
+    ),
     create=extend_schema(
         summary="Створити локацію",
         description="Автором стає поточний користувач.",
@@ -77,6 +82,13 @@ class LocationViewSet(viewsets.ModelViewSet):
         if self.action != "list":
             return queryset
         return super().filter_queryset(queryset)
+
+    def retrieve(self, request, *args, **kwargs):
+        location = self.get_object()
+        if services.register_view(location, request):
+            # Перечитуємо, щоб лічильники й popularity враховували щойно записаний перегляд.
+            location = selectors.get_location(location.pk)
+        return Response(self.get_serializer(location).data)
 
     def perform_create(self, serializer):
         location = services.create_location(author=self.request.user, **serializer.validated_data)

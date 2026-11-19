@@ -1,12 +1,16 @@
 import logging
 
+from django.conf import settings
+from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
+from django.http import HttpRequest
 
 from apps.users.models import User
 from common.exceptions import ConflictError
+from common.http import get_client_ip
 
-from .models import Category, Location
+from .models import Category, Location, LocationView
 
 logger = logging.getLogger(__name__)
 
@@ -60,3 +64,40 @@ def delete_location(location: Location) -> None:
     """М'яке видалення: рядок і пов'язані дані лишаються в БД, локація зникає з API."""
     location.delete()
     logger.info("Location soft-deleted", extra={"location_id": location.pk})
+
+
+def _visitor_key(request: HttpRequest) -> str:
+    if request.user.is_authenticated:
+        return f"user:{request.user.pk}"
+    return f"anon:{get_client_ip(request)}"
+
+
+def register_view(location: Location, request: HttpRequest) -> bool:
+    """
+    Записує перегляд деталей локації; повертає True, якщо його зараховано.
+
+    Один перегляд на відвідувача за LOCATION_VIEW_DEDUP_TTL; автор власну локацію
+    не накручує. Якщо Redis недоступний — перегляд не рахується (без дедуплікації
+    лічильник легко накрутити), а запит продовжується як звичайно.
+    """
+    user = request.user if request.user.is_authenticated else None
+    if user is not None and user.pk == location.author_id:
+        return False
+
+    visitor_key = _visitor_key(request)
+    try:
+        # У django-redis це атомарний SET NX EX: з паралельних запитів пройде лише один.
+        added = cache.add(
+            f"location-view:{location.pk}:{visitor_key}", 1, settings.LOCATION_VIEW_DEDUP_TTL
+        )
+    except Exception:
+        # Другий рубіж: зазвичай помилки Redis гасить IGNORE_EXCEPTIONS і add() повертає None.
+        logger.warning(
+            "View dedup cache unavailable", extra={"location_id": location.pk}, exc_info=True
+        )
+        return False
+    if not added:
+        return False
+
+    LocationView.objects.create(location=location, user=user, visitor_key=visitor_key)
+    return True

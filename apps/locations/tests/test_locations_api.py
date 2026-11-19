@@ -49,8 +49,9 @@ class TestRead:
     def test_anonymous_can_list_and_retrieve(self, api_client):
         location = LocationFactory(latitude=Decimal("50.450100"), longitude=Decimal("-30.523400"))
 
-        list_response = api_client.get(LIST_URL)
+        # Деталі першими: перегляд, який вони записують, уже видно й у списку.
         detail_response = api_client.get(detail_url(location))
+        list_response = api_client.get(LIST_URL)
 
         assert list_response.status_code == 200
         assert list_response.json()["count"] == 1
@@ -71,8 +72,8 @@ class TestRead:
             "author": {"id": location.author.pk, "username": location.author.username},
             "avg_rating": None,
             "reviews_count": 0,
-            "views_7d": 0,
-            "views_total": 0,
+            "views_7d": 1,
+            "views_total": 1,
             "popularity": body["popularity"],
             "created_at": body["created_at"],
             "updated_at": body["updated_at"],
