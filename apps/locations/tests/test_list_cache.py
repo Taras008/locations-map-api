@@ -252,6 +252,69 @@ class TestInvalidationViaAdmin:
         assert not Location.all_objects.get(pk=location.pk).is_deleted
 
 
+class TestInvalidationOnUsernameChange:
+    @pytest.fixture
+    def author(self, location):
+        return location.author
+
+    def author_username(self, client: APIClient) -> str:
+        return results(client)[0]["author"]["username"]
+
+    def test_orm_save(self, api_client, author):
+        self.author_username(api_client)
+
+        author.username = "renamed"
+        author.save()
+
+        assert self.author_username(api_client) == "renamed"
+
+    def test_save_with_update_fields(self, api_client, author):
+        self.author_username(api_client)
+
+        author.username = "renamed"
+        author.save(update_fields=["username"])
+
+        assert self.author_username(api_client) == "renamed"
+
+    def test_admin_change_form(self, api_client, author):
+        self.author_username(api_client)
+        admin = Client()
+        admin.force_login(UserFactory(is_staff=True, is_superuser=True))
+
+        response = admin.post(
+            f"/admin/users/user/{author.pk}/change/",
+            {
+                "email": author.email,
+                "username": "from-admin",
+                "is_active": "on",
+                "date_joined_0": author.date_joined.strftime("%d.%m.%Y"),
+                "date_joined_1": author.date_joined.strftime("%H:%M:%S"),
+            },
+        )
+
+        assert response.status_code == 302, response.context["adminform"].form.errors
+        assert self.author_username(api_client) == "from-admin"
+
+    def test_other_changes_keep_cache(self, api_client, author, django_assert_num_queries):
+        api_client.get(LIST_URL)
+
+        author.first_name = "Олена"
+        author.save()
+        with django_assert_num_queries(1):
+            # Як у login: лише UPDATE, без запиту на перевірку username.
+            author.save(update_fields=["last_login"])
+
+        with django_assert_num_queries(0):
+            api_client.get(LIST_URL)
+
+    def test_new_user_keeps_cache(self, api_client, location, django_assert_num_queries):
+        api_client.get(LIST_URL)
+        UserFactory()
+
+        with django_assert_num_queries(0):
+            api_client.get(LIST_URL)
+
+
 class TestRedisUnavailable:
     def test_cache_errors_fall_back_to_db(self, api_client, location):
         # Підміняємо лише кеш списку: throttling і сесії ходять у той самий Redis окремо.
