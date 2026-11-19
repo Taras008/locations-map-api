@@ -132,6 +132,8 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_FAILURE_VIEW = "common.exceptions.csrf_failure"
+# Термін дії посилання для скидання пароля, секунд.
+PASSWORD_RESET_TIMEOUT = env_int("PASSWORD_RESET_TIMEOUT", 60 * 60 * 24)
 
 # --- i18n ---
 LANGUAGE_CODE = "uk"
@@ -183,8 +185,10 @@ REST_FRAMEWORK = {
         "anon": env_str("THROTTLE_ANON", "60/min"),
         "user": env_str("THROTTLE_USER", "300/min"),
         "login": env_str("THROTTLE_LOGIN", "10/min"),
+        "login_email": env_str("THROTTLE_LOGIN_EMAIL", "5/min"),
         "register": env_str("THROTTLE_REGISTER", "5/hour"),
         "password_reset": env_str("THROTTLE_PASSWORD_RESET", "5/hour"),
+        "password_reset_confirm": env_str("THROTTLE_PASSWORD_RESET_CONFIRM", "10/hour"),
         "export": env_str("THROTTLE_EXPORT", "10/min"),
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
@@ -220,6 +224,9 @@ EMAIL_HOST_PASSWORD = env_str("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", False)
 EMAIL_TIMEOUT = env_int("EMAIL_TIMEOUT", 10)
 DEFAULT_FROM_EMAIL = env_str("DEFAULT_FROM_EMAIL", "Locations Map <noreply@locations.local>")
+# Ретраї email-задач Celery: кількість повторів і експоненційна затримка (секунд, база).
+EMAIL_TASK_MAX_RETRIES = env_int("EMAIL_TASK_MAX_RETRIES", 3)
+EMAIL_TASK_RETRY_BACKOFF = env_int("EMAIL_TASK_RETRY_BACKOFF", 10)
 
 # --- Logging ---
 LOG_LEVEL = env_str("LOG_LEVEL", "INFO").upper()
