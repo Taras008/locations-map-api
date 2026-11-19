@@ -15,7 +15,7 @@ dependencies = [
     "django-cors-headers>=4.6",
     "whitenoise>=6.8",
     "gunicorn>=23.0",
-    "pandas>=2.2",
+    "pandas>=3.0",
 ]
 
 [dependency-groups]

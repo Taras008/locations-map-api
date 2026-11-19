@@ -55,7 +55,8 @@ def render_export(rows: list[dict], file_format: str) -> ExportFile:
         return ExportFile(content, "application/json", filename)
     # Назву, опис, адресу вводять користувачі: без префікса «'» рядок на кшталт
     # =HYPERLINK(...) виконався б у табличному редакторі того, хто відкрив експорт.
-    text_columns = frame.select_dtypes(include="object").columns
+    # "str" — рядковий dtype pandas 3.
+    text_columns = frame.select_dtypes(include=["object", "str"]).columns
     frame[text_columns] = frame[text_columns].map(_neutralize_formula)
     # BOM, щоб Excel розпізнав UTF-8 і коректно показав кирилицю.
     content = frame.to_csv(index=False).encode("utf-8-sig")
