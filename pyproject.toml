@@ -1,0 +1,72 @@
+[project]
+name = "locations-map"
+version = "0.1.0"
+description = "REST API для мапи популярності локацій"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "django>=5.2,<5.3",
+    "djangorestframework>=3.15",
+    "django-filter>=24.3",
+    "psycopg[binary]>=3.2",
+    "django-redis>=5.4",
+    "redis>=5.0",
+    "celery>=5.4",
+    "drf-spectacular>=0.28",
+    "django-cors-headers>=4.6",
+    "whitenoise>=6.8",
+    "gunicorn>=23.0",
+    "pandas>=2.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-django>=4.9",
+    "pytest-cov>=6.0",
+    "factory-boy>=3.3",
+    "freezegun>=1.5",
+    "ruff>=0.8",
+    "pre-commit>=4.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["**/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "DJ", "SIM", "RUF", "S"]
+# RUF001-003: україномовні рядки й коментарі навмисні (кирилиця — не "confusable")
+ignore = ["RUF001", "RUF002", "RUF003", "RUF012"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/*" = ["S101", "S105", "S106"]
+"conftest.py" = ["S101"]
+"config/settings/*" = ["S105"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "common", "config"]
+
+[tool.pytest.ini_options]
+addopts = "--ds=config.settings.test -q --strict-markers"
+python_files = ["test_*.py"]
+testpaths = ["apps", "common", "config"]
+
+[tool.coverage.run]
+source = ["apps", "common", "config"]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "config/settings/*",
+    "config/wsgi.py",
+    "config/asgi.py",
+    "config/gunicorn.conf.py",
+]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_covered = true
