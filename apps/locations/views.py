@@ -4,7 +4,7 @@ from rest_framework.response import Response
 
 from common.permissions import IsAdminOrReadOnly, IsOwnerOrAdminOrReadOnly
 
-from . import selectors, services
+from . import caching, selectors, services
 from .filters import LocationFilterSet
 from .serializers import CategorySerializer, LocationSerializer
 
@@ -82,6 +82,21 @@ class LocationViewSet(viewsets.ModelViewSet):
         if self.action != "list":
             return queryset
         return super().filter_queryset(queryset)
+
+    def list(self, request, *args, **kwargs):
+        # Відповідь не залежить від request.user, тож кешується спільно для всіх.
+        known_params = [
+            *self.filterset_class.base_filters,
+            self.paginator.page_query_param,
+            self.paginator.page_size_query_param,
+        ]
+        key, data = caching.get_cached_list(request.query_params, known_params)
+        if data is not None:
+            return Response(data)
+        response = super().list(request, *args, **kwargs)
+        if key is not None and response.status_code == 200:
+            caching.set_cached_list(key, response.data)
+        return response
 
     def retrieve(self, request, *args, **kwargs):
         location = self.get_object()

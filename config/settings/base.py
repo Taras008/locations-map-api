@@ -182,6 +182,12 @@ POPULARITY_VIEWS_WINDOW_DAYS = env_int("POPULARITY_VIEWS_WINDOW_DAYS", 7)
 # Повторний перегляд тим самим відвідувачем протягом цього часу (секунд) не рахується.
 LOCATION_VIEW_DEDUP_TTL = env_int("LOCATION_VIEW_DEDUP_TTL", 60 * 60)
 
+# --- List cache / export ---
+# TTL кешу відповіді списку локацій, секунд (див. apps.locations.caching).
+LOCATIONS_LIST_CACHE_TTL = env_int("LOCATIONS_LIST_CACHE_TTL", 5 * 60)
+# Максимум рядків в одному файлі експорту.
+EXPORT_MAX_ROWS = env_int("EXPORT_MAX_ROWS", 10_000)
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "common.authentication.SessionAuthentication",

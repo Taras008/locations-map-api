@@ -6,3 +6,6 @@ class LocationsConfig(AppConfig):
     name = "apps.locations"
     label = "locations"
     verbose_name = "Локації"
+
+    def ready(self) -> None:
+        from . import signals  # noqa: F401
