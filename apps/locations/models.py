@@ -89,3 +89,35 @@ class Location(TimeStampedModel, SoftDeleteModel):
 
     def __str__(self) -> str:
         return self.name
+
+
+class LocationView(models.Model):
+    """
+    Факт перегляду деталей локації. Лічильники (views_7d, views_total) рахуються
+    Subquery в selectors, тож таблиця лише накопичує події.
+    """
+
+    location = models.ForeignKey(
+        Location, on_delete=models.CASCADE, related_name="views", verbose_name="локація"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="location_views",
+        verbose_name="користувач",
+    )
+    # user:{id} або anon:{ip} — ключ дедуплікації переглядів.
+    visitor_key = models.CharField("ключ відвідувача", max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "перегляд локації"
+        verbose_name_plural = "перегляди локацій"
+        indexes = [
+            models.Index(fields=["location", "created_at"], name="locationview_loc_created_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.visitor_key} → #{self.location_id}"

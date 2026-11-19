@@ -2,7 +2,7 @@ from decimal import Decimal
 
 import factory
 
-from apps.locations.models import Category, Location
+from apps.locations.models import Category, Location, LocationView
 from apps.users.tests.factories import UserFactory
 
 
@@ -25,3 +25,11 @@ class LocationFactory(factory.django.DjangoModelFactory):
     latitude = Decimal("50.450100")
     longitude = Decimal("30.523400")
     author = factory.SubFactory(UserFactory)
+
+
+class LocationViewFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = LocationView
+
+    location = factory.SubFactory(LocationFactory)
+    visitor_key = factory.Sequence(lambda n: f"anon:10.0.0.{n % 256}")
