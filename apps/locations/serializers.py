@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from apps.users.serializers import PublicUserSerializer
 
+from .export import ExportFormat
 from .models import Category, Location
 
 
@@ -79,3 +80,10 @@ class LocationSerializer(serializers.ModelSerializer):
             "latitude": {"coerce_to_string": False},
             "longitude": {"coerce_to_string": False},
         }
+
+
+class ExportQuerySerializer(serializers.Serializer):
+    # Не `format`: цей параметр перехоплює content negotiation DRF.
+    file_format = serializers.ChoiceField(
+        choices=ExportFormat.CHOICES, default=ExportFormat.CSV, help_text="Формат файлу."
+    )

@@ -1,12 +1,18 @@
+from django.conf import settings
+from django.http import HttpResponse
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from common.permissions import IsAdminOrReadOnly, IsOwnerOrAdminOrReadOnly
+from common.throttles import ScopedThrottle
 
 from . import caching, selectors, services
+from .export import render_export
 from .filters import LocationFilterSet
-from .serializers import CategorySerializer, LocationSerializer
+from .serializers import CategorySerializer, ExportQuerySerializer, LocationSerializer
 
 CONFLICT = OpenApiResponse(description="Категорія містить локації.")
 
@@ -69,9 +75,17 @@ class LocationViewSet(viewsets.ModelViewSet):
     permission_classes = [IsOwnerOrAdminOrReadOnly]
     owner_field = "author"
     filterset_class = LocationFilterSet
+    # Діє лише для export: ScopedThrottle додається в get_throttles().
+    throttle_scope = "export"
+
+    def get_throttles(self):
+        throttles = super().get_throttles()
+        if self.action == "export":
+            throttles.append(ScopedThrottle())
+        return throttles
 
     def get_queryset(self):
-        if self.action in ("list", "retrieve"):
+        if self.action in ("list", "retrieve", "export"):
             return selectors.get_locations()
         return selectors.get_locations_for_write()
 
@@ -79,7 +93,7 @@ class LocationViewSet(viewsets.ModelViewSet):
         # Фільтри й сортування — лише для списку: get_object() теж викликає filter_queryset,
         # і ?min_rating/?ordering на деталях чи записі дали б 404/400 або FieldError (500)
         # на запиті без анотацій.
-        if self.action != "list":
+        if self.action not in ("list", "export"):
             return queryset
         return super().filter_queryset(queryset)
 
@@ -116,3 +130,30 @@ class LocationViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         services.delete_location(instance)
+
+    @extend_schema(
+        summary="Експорт локацій у CSV або JSON",
+        description="Ті самі фільтри й сортування, що й у списку, без пагінації. Не більше "
+        "EXPORT_MAX_ROWS рядків; якщо результат обрізано — заголовок X-Export-Truncated: true.",
+        filters=True,
+        parameters=[ExportQuerySerializer],
+        responses={
+            (200, "text/csv"): OpenApiTypes.BINARY,
+            (200, "application/json"): OpenApiTypes.BINARY,
+        },
+    )
+    @action(detail=False, methods=["get"], url_path="export", pagination_class=None)
+    def export(self, request):
+        params = ExportQuerySerializer(data=request.query_params)
+        params.is_valid(raise_exception=True)
+        queryset = self.filter_queryset(self.get_queryset())
+        limit = settings.EXPORT_MAX_ROWS
+        rows, truncated = selectors.get_export_rows(queryset, limit)
+
+        export = render_export(rows, params.validated_data["file_format"])
+        response = HttpResponse(export.content, content_type=export.content_type)
+        response["Content-Disposition"] = f'attachment; filename="{export.filename}"'
+        response["X-Export-Limit"] = str(limit)
+        if truncated:
+            response["X-Export-Truncated"] = "true"
+        return response

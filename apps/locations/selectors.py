@@ -100,3 +100,33 @@ def get_locations() -> QuerySet[Location]:
 
 def get_location(pk: int) -> Location:
     return get_object_or_404(get_locations(), pk=pk)
+
+
+def get_export_rows(queryset: QuerySet[Location], limit: int) -> tuple[list[dict], bool]:
+    """
+    Плоскі рядки для експорту з уже відфільтрованого й відсортованого queryset (з анотаціями
+    annotate_stats). Повертає (рядки, чи обрізано за limit). Email автора не потрапляє.
+    """
+    locations = list(queryset[: limit + 1])
+    truncated = len(locations) > limit
+    rows = [
+        {
+            "id": location.pk,
+            "name": location.name,
+            "description": location.description,
+            "address": location.address,
+            "latitude": float(location.latitude),
+            "longitude": float(location.longitude),
+            "category_id": location.category_id,
+            "category_name": location.category.name,
+            "author_id": location.author_id,
+            "author_username": location.author.username,
+            "avg_rating": None if location.avg_rating is None else round(location.avg_rating, 2),
+            "reviews_count": location.reviews_count,
+            "views_7d": location.views_7d,
+            "popularity": round(location.popularity, 3),
+            "created_at": location.created_at.isoformat(),
+        }
+        for location in locations[:limit]
+    ]
+    return rows, truncated

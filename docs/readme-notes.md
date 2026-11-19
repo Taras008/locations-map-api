@@ -64,3 +64,16 @@
 - Компроміси: перегляди кеш не скидають (інакше кожне відкриття деталей обнуляло б кеш), тому
   `views_7d`/`popularity` у списку відстають максимум на TTL. Те саме для зміни username автора
   через Admin — сигнал на User не вішаємо, бо `last_login` зберігається при кожному вході.
+
+## Експорт
+- `GET /api/v1/locations/export/?file_format=csv|json` (за замовчуванням csv) — ті самі фільтри
+  й сортування, що й у списку, без пагінації. Поля: локація, категорія (id, назва), автор
+  (id, username — без email), avg_rating, reviews_count, views_7d, popularity, created_at.
+- Ліміт — `EXPORT_MAX_ROWS` (10 000). Відповідь завжди має `X-Export-Limit`; якщо рядків
+  більше — віддаються перші N за поточним сортуванням і заголовок `X-Export-Truncated: true`.
+- Файл `locations-YYYY-MM-DD.csv|json` (`Content-Disposition: attachment`). CSV — з BOM,
+  щоб Excel правильно показав кирилицю.
+- Окремий throttle `export` (10/хв) поверх загальних лімітів. Експорт не кешується.
+- Значення, що починаються з `= + - @`, табуляції чи CR, у CSV отримують префікс `'` (захист
+  від CSV/formula injection); у JSON віддаються як є. `Content-Disposition` і `X-Export-*`
+  додані в `CORS_EXPOSE_HEADERS`, щоб їх бачив SPA на іншому домені.

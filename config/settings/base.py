@@ -154,6 +154,8 @@ STORAGES = {
 # --- CORS / CSRF ---
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS")
 CORS_ALLOW_CREDENTIALS = True
+# Без цього SPA на іншому домені не прочитає ім'я файлу й ознаку обрізання експорту.
+CORS_EXPOSE_HEADERS = ["Content-Disposition", "X-Export-Truncated", "X-Export-Limit"]
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
 FRONTEND_URL = env_str("FRONTEND_URL", "http://localhost:3000")
 
