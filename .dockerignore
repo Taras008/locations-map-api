@@ -1,0 +1,12 @@
+# Allowlist: у build context потрапляє лише те, що потрібно для запуску застосунку.
+*
+!pyproject.toml
+!uv.lock
+!manage.py
+!config/
+!common/
+!apps/
+!docker/
+!templates/
+**/__pycache__
+**/*.py[cod]
