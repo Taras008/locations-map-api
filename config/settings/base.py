@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "apps.users",
     "apps.locations",
     "apps.reviews",
+    "apps.notifications",
 ]
 
 MIDDLEWARE = [

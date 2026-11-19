@@ -2,10 +2,14 @@ from django.conf import settings
 from django.http import HttpResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.notifications import services as notification_services
+from apps.notifications.serializers import SubscriptionSerializer
 from common.permissions import IsAdminOrReadOnly, IsOwnerOrAdminOrReadOnly
 from common.throttles import ScopedThrottle
 
@@ -15,6 +19,8 @@ from .filters import LocationFilterSet
 from .serializers import CategorySerializer, ExportQuerySerializer, LocationSerializer
 
 CONFLICT = OpenApiResponse(description="Категорія містить локації.")
+UNAUTHORIZED = OpenApiResponse(description="Потрібна автентифікація.")
+LOCATION_NOT_FOUND = OpenApiResponse(description="Локацію не знайдено або видалено.")
 
 
 @extend_schema_view(
@@ -157,3 +163,41 @@ class LocationViewSet(viewsets.ModelViewSet):
         if truncated:
             response["X-Export-Truncated"] = "true"
         return response
+
+    @extend_schema(
+        methods=["post"],
+        summary="Підписатися на нові відгуки локації",
+        description="Підписник отримує email про кожен новий відгук, крім власних. "
+        "Повторна підписка — 409.",
+        request=None,
+        responses={
+            201: SubscriptionSerializer,
+            401: UNAUTHORIZED,
+            404: LOCATION_NOT_FOUND,
+            409: OpenApiResponse(description="Користувач уже підписаний."),
+        },
+    )
+    @extend_schema(
+        methods=["delete"],
+        summary="Відписатися від локації",
+        request=None,
+        responses={
+            204: None,
+            401: UNAUTHORIZED,
+            404: OpenApiResponse(description="Локацію не знайдено або підписки немає."),
+        },
+    )
+    @action(
+        detail=True,
+        methods=["post", "delete"],
+        url_path="subscription",
+        permission_classes=[IsAuthenticated],
+    )
+    def subscription(self, request, pk=None):
+        # Не get_object(): права власника тут не діють, підписатися може будь-хто.
+        location = get_object_or_404(selectors.get_locations_for_write(), pk=pk)
+        if request.method == "DELETE":
+            notification_services.unsubscribe(user=request.user, location=location)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        subscription = notification_services.subscribe(user=request.user, location=location)
+        return Response(SubscriptionSerializer(subscription).data, status=status.HTTP_201_CREATED)
