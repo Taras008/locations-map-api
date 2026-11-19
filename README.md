@@ -69,47 +69,6 @@ make seed    # демо-дані
 
 ## Архітектура
 
-```mermaid
-flowchart LR
-    client["Клієнт / SPA"] -- "HTTP, session cookie + CSRF" --> web
-
-    subgraph compose["Docker Compose"]
-        web["web<br/>gunicorn + Django/DRF"]
-        celery["celery<br/>worker"]
-        db[("PostgreSQL<br/>дані, анотації рейтингу")]
-        redis[("Redis<br/>кеш списку, дедуп переглядів,<br/>throttling, брокер Celery")]
-        mailpit["Mailpit<br/>SMTP + UI"]
-    end
-
-    web --> db
-    web --> redis
-    web -- "задачі (on_commit)" --> redis
-    redis -- "задачі" --> celery
-    celery --> db
-    celery -- "SMTP" --> mailpit
-```
-
-Шари всередині застосунку:
-
-```mermaid
-flowchart TB
-    views["views + serializers<br/>(тонкі: HTTP, валідація формату)"]
-    permissions["permission-класи DRF"]
-    services["services.py<br/>запис і бізнес-правила"]
-    selectors["selectors.py<br/>читання, annotate_stats()"]
-    models["models<br/>constraints, soft delete"]
-    signals["signals<br/>інвалідація кешу"]
-    tasks["Celery tasks<br/>email"]
-
-    views --> permissions
-    views --> services
-    views --> selectors
-    services --> models
-    selectors --> models
-    models -. "post_save / post_delete" .-> signals
-    services -. "transaction.on_commit" .-> tasks
-```
-
 ```
 config/              settings/{base,dev,test,prod}.py, urls, celery
 apps/users/          User (вхід за email), auth-ендпоінти, скидання пароля
