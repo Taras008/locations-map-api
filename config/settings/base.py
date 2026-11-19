@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "common",
     "apps.users",
     "apps.locations",
+    "apps.reviews",
 ]
 
 MIDDLEWARE = [
@@ -163,6 +164,9 @@ NUM_PROXIES = env_int("TRUSTED_PROXY_COUNT", 0)
 # --- DRF ---
 PAGE_SIZE = env_int("API_PAGE_SIZE", 20)
 MAX_PAGE_SIZE = env_int("API_MAX_PAGE_SIZE", 100)
+
+# --- Reviews ---
+REVIEW_COMMENT_MAX_LENGTH = env_int("REVIEW_COMMENT_MAX_LENGTH", 2000)
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [

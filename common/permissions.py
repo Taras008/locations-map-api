@@ -28,3 +28,18 @@ class IsOwnerOrAdminOrReadOnly(BasePermission):
             return True
         owner_field = getattr(view, "owner_field", "author")
         return getattr(obj, f"{owner_field}_id") == request.user.pk
+
+
+class IsOwnerOrAdminDeleteOrReadOnly(IsOwnerOrAdminOrReadOnly):
+    """
+    Як IsOwnerOrAdminOrReadOnly, але адміністратор може лише видаляти чужі об'єкти
+    (модерація), а не переписувати їх.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
+        owner_field = getattr(view, "owner_field", "author")
+        if getattr(obj, f"{owner_field}_id") == request.user.pk:
+            return True
+        return request.method == "DELETE" and is_admin(request.user)

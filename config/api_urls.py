@@ -11,5 +11,6 @@ router.register("locations", LocationViewSet, basename="location")
 urlpatterns = [
     path("health/", HealthView.as_view(), name="health"),
     path("auth/", include("apps.users.urls")),
+    path("", include("apps.reviews.urls")),
     *router.urls,
 ]
