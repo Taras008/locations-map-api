@@ -31,6 +31,18 @@ def auth_client(user) -> APIClient:
 
 
 @pytest.fixture
+def staff_user(db):
+    return UserFactory(is_staff=True)
+
+
+@pytest.fixture
+def staff_client(staff_user) -> APIClient:
+    client = APIClient()
+    client.force_authenticate(staff_user)
+    return client
+
+
+@pytest.fixture
 def throttle_rates(monkeypatch):
     """
     Перевизначає ліміти throttling у тесті: throttle_rates(anon="2/min").
