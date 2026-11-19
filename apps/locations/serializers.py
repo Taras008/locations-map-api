@@ -42,6 +42,16 @@ class LocationSerializer(serializers.ModelSerializer):
     )
     # Автор завжди request.user: поле лише для читання, передане значення ігнорується.
     author = PublicUserSerializer(read_only=True)
+    # Статистика — анотації selectors.annotate_stats(), не поля моделі.
+    avg_rating = serializers.DecimalField(
+        max_digits=3, decimal_places=2, coerce_to_string=False, allow_null=True, read_only=True
+    )
+    reviews_count = serializers.IntegerField(read_only=True)
+    views_7d = serializers.IntegerField(read_only=True)
+    views_total = serializers.IntegerField(read_only=True)
+    popularity = serializers.DecimalField(
+        max_digits=8, decimal_places=3, coerce_to_string=False, read_only=True
+    )
 
     class Meta:
         model = Location
@@ -55,6 +65,11 @@ class LocationSerializer(serializers.ModelSerializer):
             "latitude",
             "longitude",
             "author",
+            "avg_rating",
+            "reviews_count",
+            "views_7d",
+            "views_total",
+            "popularity",
             "created_at",
             "updated_at",
         )

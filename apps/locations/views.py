@@ -4,6 +4,7 @@ from rest_framework import viewsets
 from common.permissions import IsAdminOrReadOnly, IsOwnerOrAdminOrReadOnly
 
 from . import selectors, services
+from .filters import LocationFilterSet
 from .serializers import CategorySerializer, LocationSerializer
 
 CONFLICT = OpenApiResponse(description="Категорія містить локації.")
@@ -40,7 +41,11 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 @extend_schema_view(
-    list=extend_schema(summary="Список локацій"),
+    list=extend_schema(
+        summary="Список локацій",
+        description="Пошук, фільтри, сортування (за замовчуванням -popularity) і пагінація. "
+        "Локації без відгуків (avg_rating = null) завжди в кінці сортування за рейтингом.",
+    ),
     retrieve=extend_schema(summary="Локація"),
     create=extend_schema(
         summary="Створити локацію",
@@ -58,17 +63,29 @@ class LocationViewSet(viewsets.ModelViewSet):
     serializer_class = LocationSerializer
     permission_classes = [IsOwnerOrAdminOrReadOnly]
     owner_field = "author"
+    filterset_class = LocationFilterSet
 
     def get_queryset(self):
-        return selectors.get_locations()
+        if self.action in ("list", "retrieve"):
+            return selectors.get_locations()
+        return selectors.get_locations_for_write()
+
+    def filter_queryset(self, queryset):
+        # Фільтри й сортування — лише для списку: get_object() теж викликає filter_queryset,
+        # і ?min_rating/?ordering на деталях чи записі дали б 404/400 або FieldError (500)
+        # на запиті без анотацій.
+        if self.action != "list":
+            return queryset
+        return super().filter_queryset(queryset)
 
     def perform_create(self, serializer):
-        serializer.instance = services.create_location(
-            author=self.request.user, **serializer.validated_data
-        )
+        location = services.create_location(author=self.request.user, **serializer.validated_data)
+        # Перечитуємо з анотаціями, щоб відповідь містила рейтинг і популярність.
+        serializer.instance = selectors.get_location(location.pk)
 
     def perform_update(self, serializer):
-        services.update_location(serializer.instance, **serializer.validated_data)
+        location = services.update_location(serializer.instance, **serializer.validated_data)
+        serializer.instance = selectors.get_location(location.pk)
 
     def perform_destroy(self, instance):
         services.delete_location(instance)

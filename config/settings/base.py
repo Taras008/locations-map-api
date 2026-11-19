@@ -168,6 +168,17 @@ MAX_PAGE_SIZE = env_int("API_MAX_PAGE_SIZE", 100)
 # --- Reviews ---
 REVIEW_COMMENT_MAX_LENGTH = env_int("REVIEW_COMMENT_MAX_LENGTH", 2000)
 
+# --- Popularity ---
+# bayes = (sum(ratings) + M * C) / (reviews_count + M)
+# popularity = W_RATING * bayes + W_REVIEWS * ln(1 + reviews_count) + W_VIEWS * ln(1 + views_7d)
+POPULARITY_BAYES_M = env_int("POPULARITY_BAYES_M", 5)
+POPULARITY_BAYES_C = env_float("POPULARITY_BAYES_C", 3.0)
+POPULARITY_WEIGHT_RATING = env_float("POPULARITY_WEIGHT_RATING", 2.0)
+POPULARITY_WEIGHT_REVIEWS = env_float("POPULARITY_WEIGHT_REVIEWS", 1.5)
+POPULARITY_WEIGHT_VIEWS = env_float("POPULARITY_WEIGHT_VIEWS", 1.0)
+# Вікно для views_7d (днів).
+POPULARITY_VIEWS_WINDOW_DAYS = env_int("POPULARITY_VIEWS_WINDOW_DAYS", 7)
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "common.authentication.SessionAuthentication",

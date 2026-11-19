@@ -4,7 +4,8 @@ import pytest
 from rest_framework.test import APIClient
 
 from apps.locations.models import Location
-from apps.locations.tests.factories import CategoryFactory, LocationFactory
+from apps.locations.tests.factories import CategoryFactory, LocationFactory, LocationViewFactory
+from apps.reviews.tests.factories import ReviewFactory
 from apps.users.tests.factories import UserFactory
 
 pytestmark = pytest.mark.django_db
@@ -68,6 +69,11 @@ class TestRead:
             "latitude": 50.4501,
             "longitude": -30.5234,
             "author": {"id": location.author.pk, "username": location.author.username},
+            "avg_rating": None,
+            "reviews_count": 0,
+            "views_7d": 0,
+            "views_total": 0,
+            "popularity": body["popularity"],
             "created_at": body["created_at"],
             "updated_at": body["updated_at"],
         }
@@ -89,9 +95,11 @@ class TestRead:
         assert response.json()["next"]
 
     def test_list_has_no_n_plus_one(self, api_client, django_assert_num_queries):
-        LocationFactory.create_batch(5)
+        for location in LocationFactory.create_batch(5):
+            ReviewFactory.create_batch(2, location=location)
+            LocationViewFactory.create_batch(2, location=location)
 
-        # count для пагінації + одна вибірка з JOIN категорії й автора.
+        # count для пагінації + одна вибірка з JOIN категорії й автора та статистикою.
         with django_assert_num_queries(2):
             response = api_client.get(LIST_URL)
 
@@ -118,6 +126,8 @@ class TestCreate:
         body = response.json()
         assert body["author"] == {"id": user.pk, "username": user.username}
         assert body["category"]["id"] == category.pk
+        assert body["avg_rating"] is None
+        assert body["reviews_count"] == 0
         location = Location.objects.get(pk=body["id"])
         assert location.author == user
         assert location.latitude == Decimal("50.459000")
@@ -132,6 +142,16 @@ class TestCreate:
 
         assert response.status_code == 201
         assert Location.objects.get(pk=response.json()["id"]).author == user
+
+    def test_stats_cannot_be_written(self, auth_client, payload):
+        response = auth_client.post(
+            LIST_URL, {**payload, "avg_rating": 5, "reviews_count": 100, "popularity": 999}
+        )
+
+        assert response.status_code == 201
+        assert response.json()["avg_rating"] is None
+        assert response.json()["reviews_count"] == 0
+        assert response.json()["popularity"] < 999
 
     @pytest.mark.parametrize("field", ["name", "category_id", "address", "latitude", "longitude"])
     def test_required_fields(self, auth_client, payload, field):
@@ -195,6 +215,7 @@ class TestUpdate:
 
         assert response.status_code == 200
         assert response.json()["category"]["id"] == new_category.pk
+        assert "popularity" in response.json()
         own_location.refresh_from_db()
         assert own_location.name == "Нова назва"
         assert own_location.category == new_category
